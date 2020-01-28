@@ -136,7 +136,7 @@ $$(BUILDDIR)/$(1)/$(1).elf: $$(OBJS_$(1)) $$(LIBS_$(1)) $$(LEGACY_LIBS_$(1)) $$(
 #       (i.e. at address 0x80000000). This is not likely what you want.
 $$(BUILDDIR)/$(1)/$(1).lst: $$(BUILDDIR)/$(1)/$(1).elf
 	$$(TRACE_LST)
-	$$(Q)$(2)$$(OBJDUMP) $$(OBJDUMP_FLAGS) $$< > $$@
+	$$(Q)$(2)$$(OBJDUMP) $$(OBJDUMP_FLAGS) $$(OBJDUMP_FLAGS_$(1)) $$< > $$@
 
 # checks compiled ELF files to ensure that all libraries and applications were
 # built with the correct flags in order to work on a Tock board
@@ -201,7 +201,7 @@ endif
 # Step 2: Create a new ELF with the layout that matches what's loaded
 $$(BUILDDIR)/$(1)/$(1).userland_debug.elf: $$(OBJS_$(1)) $$(LIBS_$(1)) $$(LEGACY_LIBS_$(1)) $$(BUILDDIR)/$(1)/$(1).userland_debug.ld | $$(BUILDDIR)/$(1)
 	$$(TRACE_LD)
-	$$(Q)$(2)$$(CC) $$(CFLAGS) -mcpu=$(1) $$(CPPFLAGS)\
+	$$(Q)$(2)$$(CC) $$(CFLAGS) $$(CPPFLAGS) $$(CPPFLAGS_$(1))\
 	    --entry=_start\
 	    -Xlinker --defsym=STACK_SIZE=$$(STACK_SIZE)\
 	    -Xlinker --defsym=APP_HEAP_SIZE=$$(APP_HEAP_SIZE)\
@@ -215,7 +215,7 @@ $$(BUILDDIR)/$(1)/$(1).userland_debug.elf: $$(OBJS_$(1)) $$(LIBS_$(1)) $$(LEGACY
 # Step 3: Now we can finally generate an LST
 $$(BUILDDIR)/$(1)/$(1).userland_debug.lst: $$(BUILDDIR)/$(1)/$(1).userland_debug.elf
 	$$(TRACE_LST)
-	$$(Q)$(2)$$(OBJDUMP) $$(OBJDUMP_FLAGS) $$< > $$@
+	$$(Q)$(2)$$(OBJDUMP) $$(OBJDUMP_FLAGS) $$(OBJDUMP_FLAGS_$(1)) $$< > $$@
 	@echo $$$$(tput bold)Listings generated at $$@$$$$(tput sgr0)
 
 # END DEBUGGING STUFF
