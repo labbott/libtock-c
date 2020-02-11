@@ -22,7 +22,7 @@ SIZE := -size
 
 # Set default region sizes
 STACK_SIZE       ?= 2048
-APP_HEAP_SIZE    ?= 1024
+APP_HEAP_SIZE    ?= 512
 KERNEL_HEAP_SIZE ?= 1024
 
 # PACKAGE_NAME is used to identify the application for IPC and for error reporting
@@ -44,7 +44,7 @@ ELF2TAB_ARGS += --stack $(STACK_SIZE) --app-heap $(APP_HEAP_SIZE) --kernel-heap 
 # n.b. make convention is that CPPFLAGS are shared for C and C++ sources
 # [CFLAGS is C only, CXXFLAGS is C++ only]
 override ASFLAGS += -mthumb
-override CFLAGS  += -std=gnu11
+override CFLAGS  += -std=gnu11 -Wl,-z,max-page-size=0x100
 override CPPFLAGS += \
       -frecord-gcc-switches\
       -gdwarf-2\
@@ -105,7 +105,13 @@ override LEGACY_LIBS_rv32imac += \
 override CPPFLAGS += -include $(TOCK_USERLAND_BASE_DIR)/support/warning_header.h
 
 # Flags for creating application Object files
-OBJDUMP_FLAGS += --disassemble-all --source --disassembler-options=force-thumb -C --section-headers
+OBJDUMP_FLAGS += --disassemble-all --source -C --section-headers
+
+override CPPFLAGS_cortex-m += \
+      -disassembler-options=force-thump
+override OBJDUMP_cortex-m4 += $(CPPFLAGS_cortex-m)
+override OBJDUMP_cortex-m3 += $(CPPFLAGS_cortex-m)
+override OBJDUMP_cortex-m0 += $(CPPFLAGS_cortex-m)
 
 # Use a generic linker script that over provisions.
 LAYOUT ?= $(TOCK_USERLAND_BASE_DIR)/userland_generic.ld

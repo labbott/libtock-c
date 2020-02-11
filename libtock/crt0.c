@@ -174,6 +174,8 @@ void _start(void* app_start __attribute__((unused)),
     // Move arguments we need to keep over to callee-saved locations.
     "mv   s0, a0\n"             // s0 = void* app_start
     "mv   s1, t0\n"             // s1 = stack_top
+    "mv   s2, a3\n"            // s2 = app_heap_break
+
     //
     // Now we may want to move the stack pointer. If the kernel set the
     // `app_heap_break` larger than we need (and we are going to call `brk()`
@@ -181,7 +183,8 @@ void _start(void* app_start __attribute__((unused)),
     // Otherwise after the first syscall (the memop to set the brk), the return
     // will use a stack that is outside of the process accessible memory.
     //
-    "add t2, t0, t1\n"          // t2 = stacktop + appdata_size
+    /* add t2, t0, t1\n     */      // t2 = stacktop + appdata_size
+    "mv t2, t1\n"          // t2 = stacktop + appdata_size
     "bgt t2, a3, skip_set_sp\n" // Compare `app_heap_break` with new brk.
                                 // If our current `app_heap_break` is larger
                                 // then we need to move the stack pointer
@@ -233,23 +236,40 @@ void _c_start(uint32_t* app_start, uint32_t stacktop) {
   struct hdr* myhdr = (struct hdr*)app_start;
 
   // fix up GOT
-  volatile uint32_t* got_start     = (uint32_t*)(myhdr->got_start + stacktop);
-  volatile uint32_t* got_sym_start = (uint32_t*)(myhdr->got_sym_start + (uint32_t)app_start);
+//  volatile uint32_t* got_start     = (uint32_t*)(myhdr->got_start + stacktop);
+//  volatile uint32_t* got_sym_start = (uint32_t*)(myhdr->got_sym_start + (uint32_t)app_start);
+    volatile uint32_t *got_start = (uint32_t *)myhdr->got_start;
+    volatile uint32_t *got_sym_start = (uint32_t *)(myhdr->got_sym_start + (uint32_t)app_start); 
+
+  command(0x8, 0x2, myhdr->got_start, 0);
+  command(0x8, 0x2, stacktop, 0);
   for (uint32_t i = 0; i < (myhdr->got_size / (uint32_t)sizeof(uint32_t)); i++) {
-    if ((got_sym_start[i] & 0x80000000) == 0) {
-      got_start[i] = got_sym_start[i] + stacktop;
-    } else {
-      got_start[i] = (got_sym_start[i] ^ 0x80000000) + (uint32_t)app_start;
-    }
+
+      command(0x8, 0x3, &got_start[i], got_sym_start[i]);
+      //yield();
+      got_start[i] = got_sym_start[i];
+	  //    if ((got_sym_start[i] & 0x80000000) == 0) {
+//      got_start[i] = got_sym_start[i] + stacktop;
+      // TODO I'm a hack
+      //got_start[i] = got_sym_start[i] + 0x2c;
+//    } else {
+//      got_start[i] = (got_sym_start[i] ^ 0x80000000) + (uint32_t)app_start;
+//    }
   }
 
+  //command(0x8, 0x2, got_start, 0);
+      //yield();
+  //command(0x8, 0x2, got_sym_start, 0);
+      //yield();
   // load data section
-  void* data_start     = (void*)(myhdr->data_start + stacktop);
+  //void* data_start     = (void*)(myhdr->data_start + stacktop);
+  void* data_start     = myhdr->data_start;
   void* data_sym_start = (void*)(myhdr->data_sym_start + (uint32_t)app_start);
   memcpy(data_start, data_sym_start, myhdr->data_size);
 
   // zero BSS
-  char* bss_start = (char*)(myhdr->bss_start + stacktop);
+  //char* bss_start = (char*)(myhdr->bss_start + stacktop);
+  char* bss_start = myhdr->bss_start;
   memset(bss_start, 0, myhdr->bss_size);
 
   struct reldata* rd = (struct reldata*)(myhdr->reldata_start + (uint32_t)app_start);
